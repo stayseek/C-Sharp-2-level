@@ -3,32 +3,56 @@ using System.Drawing;
 
 namespace Asteroids
 {
-    class BaseObject
+    abstract class BaseObject : ICollision
     {
+        /// <summary>
+        /// Позиция объекта на экране.
+        /// </summary>
         protected Point Pos;
+        /// <summary>
+        /// Направление движения объекта.
+        /// </summary>
         protected Point Dir;
+        /// <summary>
+        /// Размер объекта.
+        /// </summary>
         protected Size Size;
-
-        public BaseObject(Point pos, Point dir, Size size)
+        /// <summary>
+        /// Максимальная скорость по одной из координат
+        /// </summary>
+        const int MAXSPEED = 50;
+        /// <summary>
+        /// Конструктор.
+        /// </summary>
+        /// <param name="pos">Положение на экране.</param>
+        /// <param name="dir">Направление движения.</param>
+        /// <param name="size">Размер объекта.</param>
+        protected BaseObject(Point pos, Point dir, Size size)
         {
+            if (pos.X < 0 || pos.Y < 0 || size.Width < 0 || size.Height < 0 || Math.Abs(dir.X) > MAXSPEED || Math.Abs(dir.Y) > MAXSPEED)
+            {
+                throw new GameObjectException();
+            }
             Pos = pos;
             Dir = dir;
             Size = size;
         }
 
-        public virtual void Draw()
-        {
-            Game.Buffer.Graphics.DrawEllipse(Pens.White, Pos.X, Pos.Y, Size.Width, Size.Height);
-        }
+        public abstract void Draw();
 
-        public virtual void Update()
-        {
-            Pos.X = Pos.X + Dir.X;
-            Pos.Y = Pos.Y + Dir.Y;
-            if (Pos.X < 0) Dir.X = -Dir.X;
-            if (Pos.X > Game.Width) Dir.X = -Dir.X;
-            if (Pos.Y < 0) Dir.Y = -Dir.Y;
-            if (Pos.Y > Game.Height) Dir.Y = -Dir.Y;
-        }
+        public abstract void Update();
+
+        public abstract void RegenerateAtX(int posX);
+
+        /// <summary>
+        /// Проверка столкновения с другим объектом.
+        /// </summary>
+        /// <param name="o">Объект с которым проверяется столкновение.</param>
+        /// <returns>Результат проверки.</returns>
+        public bool Collision(ICollision o) => o.Rect.IntersectsWith(this.Rect);
+        /// <summary>
+        /// Прямоугольник, в который вписан объект.
+        /// </summary>
+        public Rectangle Rect => new Rectangle(Pos, Size);
     }
 }
