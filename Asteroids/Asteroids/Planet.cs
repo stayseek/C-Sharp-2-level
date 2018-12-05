@@ -8,8 +8,7 @@ namespace Asteroids
         /// <summary>
         /// Изображение для отображения.
         /// </summary>
-        Image planetImage;
-
+        private Image planetImage;
         /// <summary>
         /// Конструктор.
         /// </summary>
@@ -35,11 +34,5 @@ namespace Asteroids
             Pos.X = Pos.X + Dir.X;
             if (Pos.X < 0) Pos.X = Game.Width + Size.Width;
         }
-
-        public override void RegenerateAtX(int posX)
-        {
-            throw new NotImplementedException();
-        }
-
     }
 }

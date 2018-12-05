@@ -22,6 +22,10 @@ namespace Asteroids
         /// </summary>
         const int MAXSPEED = 50;
         /// <summary>
+        /// Делегат для игровых событий.
+        /// </summary>
+        public delegate void Message();
+        /// <summary>
         /// Конструктор.
         /// </summary>
         /// <param name="pos">Положение на экране.</param>
@@ -41,8 +45,6 @@ namespace Asteroids
         public abstract void Draw();
 
         public abstract void Update();
-
-        public abstract void RegenerateAtX(int posX);
 
         /// <summary>
         /// Проверка столкновения с другим объектом.
