@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Windows.Forms;
 using System.Drawing;
+using System.IO;
 
 namespace Asteroids
 {
@@ -22,7 +23,6 @@ namespace Asteroids
         /// Высота экрана.
         /// </summary>
         public static int Height { set; get; }
-
         /// <summary>
         /// Массив объектов фона.
         /// </summary>
@@ -36,19 +36,59 @@ namespace Asteroids
         /// </summary>
         private static Asteroid[] _asteroids;
         /// <summary>
+        /// Массив аптечек.
+        /// </summary>
+        private static HealthPack[] _healthpacks;
+        /// <summary>
+        /// Корабль игрока.
+        /// </summary>
+        private static Ship _ship = new Ship(new Point(10, 400), new Point(5, 5), new Size(10, 10));
+        /// <summary>
+        /// Счёт игры.
+        /// </summary>
+        private static int _score;
+        /// <summary>
+        /// Таймер для событий.
+        /// </summary>
+        private static Timer _timer = new Timer();
+        /// <summary>
+        /// Рандомизатор.
+        /// </summary>
+        public static Random rnd = new Random();
+        /// <summary>
         /// Максимальная размерность экрана для выброса исключения.
         /// </summary>
-        const int MAXSCREENSIZE = 1600;
+        const int MAXSCREENSIZE = 1920;
         /// <summary>
         /// Количество астероидов на экране.
         /// </summary>
         const int ASTEROIDSCOUNT = 30;
-        
+        /// <summary>
+        /// Начальное количество аптечек.
+        /// </summary>
+        const int HEALTHPACKSCOUNT = 5;
+        /// <summary>
+        /// Скорость пули.
+        /// </summary>
+        const int BULLETSPEED = 20;
+        /// <summary>
+        /// Стоимость уничтожения одного астероида.
+        /// </summary>
+        const int ASTEROIDSCORE = 10;
+        /// <summary>
+        /// Имя файла лога.
+        /// </summary>
+        const string LOGFILENAME = "game.log";
+        /// <summary>
+        /// Делегат для функции логирования.
+        /// </summary>
+        private static Action<string> WriteToLog;
+
         static Game()
         {
         }
         /// <summary>
-        /// Инициализация графической системы, вызов загрузки объектов и запуск таймера.
+        /// Инициализация графической системы, вызов загрузки объектов, запуск таймера, регистрация событий таймера, управления кораблёмб окончания игры.
         /// </summary>
         /// <param name="form">Форма для вывода графики.</param>
         public static void Init(Form form)
@@ -65,69 +105,120 @@ namespace Asteroids
                 throw new ArgumentOutOfRangeException();
             }
             Buffer = _context.Allocate(g, new Rectangle(0, 0, Width, Height)); // Связываем буфер в памяти с графическим объектом, чтобы рисовать в буфере
+            WriteToLog = LogToConsole;
+            WriteToLog += LogToFile;
+            WriteToLog($"Игра началась.");
             Load(); //Загрузка объектов
-            Timer timer = new Timer { Interval = 100 }; //Таймер
-            timer.Start();
-            timer.Tick += Timer_Tick;
+            _score = 0;
+            _timer.Start();
+            _timer.Tick += Timer_Tick;
+            form.KeyDown += Form_KeyDown;
+            Ship.MessageDie += Finish;
         }
         /// <summary>
         /// Создание массивов объектов, астероидов и пули, задание их начальных положений, скорости и размеров.
         /// </summary>
-        public static void Load()
+        private static void Load()
         {
             _objs = new BaseObject[30];
             _asteroids = new Asteroid[ASTEROIDSCOUNT];
-            //try
-            //{
-                _bullet = new Bullet(new Point(0, 200), new Point(5, 0), new Size(4, 1));
-                var rnd = new Random();
-                for (var i = 0; i < _objs.Length; i++)
-                {
-                    int r = rnd.Next(5, 50);
-                    _objs[i] = new Star(new Point(1000, rnd.Next(0, Game.Height)), new Point(-r, r), new Size(3, 3));
-                }
-                for (var i = 0; i < _asteroids.Length; i++)
-                {
-                    int r = rnd.Next(5, 50);
-                    _asteroids[i] = new Asteroid(new Point(1000, rnd.Next(0, Game.Height)), new Point(-r / 5, r), new Size(r, r));
-                }
-            //}
-            //catch (GameObjectException)
-            //{
-            //}
-            
+            _healthpacks = new HealthPack[HEALTHPACKSCOUNT];
+
+            for (var i = 0; i < _objs.Length/2; i++)
+            {
+                int r = rnd.Next(5, 50);
+                _objs[i] = new Star(new Point(1000, rnd.Next(0, Game.Height)), new Point(-r, r), new Size(3, 3));
+                WriteToLog($"Звезда {i} создана.");
+            }
+            for (var i = _objs.Length / 2; i < _objs.Length; i++)
+            {
+                int r = rnd.Next(5, 50);
+                _objs[i] = new Planet(new Point(1000, rnd.Next(0, Game.Height)), new Point(-r, r), new Size(16, 16));
+                WriteToLog($"Планета {i} создана.");
+            }
+            for (var i = 0; i < _asteroids.Length; i++)
+            {
+                int r = rnd.Next(5, 50);
+                _asteroids[i] = new Asteroid(new Point(1000, rnd.Next(0, Game.Height)), new Point(-r / 5, r), new Size(r, r));
+                WriteToLog($"Астероид {i} создан.");
+            }
+            for (var i = 0; i < _healthpacks.Length; i++)
+            {
+                int r = rnd.Next(5, 50);
+                _healthpacks[i] = new HealthPack(new Point(1000, rnd.Next(0, Game.Height)), new Point(-r / 5, r), new Size(16, 16));
+                WriteToLog($"Аптечка {i} создана.");
+            }
         }
         /// <summary>
         /// Очистка экрана и вывод на экран игровых объектов. 
         /// </summary>
-        public static void Draw()
+        private static void Draw()
         {
             Buffer.Graphics.Clear(Color.Black);
             foreach (BaseObject obj in _objs)
                 obj.Draw();
-            foreach (Asteroid obj in _asteroids)
-                obj.Draw();
-            _bullet.Draw();
+            foreach (Asteroid a in _asteroids)
+            {
+                if (a == null) continue;
+                a.Draw();
+            }
+            foreach (HealthPack h in _healthpacks)
+            {
+                if (h == null) continue;
+                h.Draw();
+            }
+            if (_bullet != null)
+            {
+                _bullet.Draw();
+            }
+            if (_ship != null)
+            {
+                _ship.Draw();
+                Buffer.Graphics.DrawString("Energy:" + _ship.Energy + "\nScore:" + _score, SystemFonts.DefaultFont, Brushes.White, 0, 0);
+            }    
             Buffer.Render();
         }
         /// <summary>
-        /// Обновление положения игровых объектов, отслеживание столкновения пули с астероидом и осуществление их регенерации в разных концах экрана.
+        /// Обновление положения игровых объектов, отслеживание столкновений.
         /// </summary>
         public static void Update()
         {
-            foreach (BaseObject obj in _objs)
-                obj.Update();
-            foreach (Asteroid a in _asteroids)
+            foreach (BaseObject obj in _objs) obj.Update();
+            if (_bullet != null)
             {
-                a.Update();
-                if (a.Collision(_bullet))
+                _bullet.Update();
+                if (_bullet.OffScreen) _bullet = null;
+            }
+            for (var i = 0; i < _asteroids.Length; i++)
+            {
+                if (_asteroids[i] == null) continue;
+                _asteroids[i].Update();
+                if (_bullet != null && _bullet.Collision(_asteroids[i]))
                 {
                     System.Media.SystemSounds.Hand.Play();
-                    a.RegenerateAtX(Width);
-                    _bullet.RegenerateAtX(0);
+                    _asteroids[i] = null;
+                    _bullet = null;
+                    _score += ASTEROIDSCORE;
+                    WriteToLog($"Астероид {i} уничтожен.");
+                    continue;
                 }
+                if (!_ship.Collision(_asteroids[i])) continue;
+                _ship.EnergyLow(rnd.Next(1, 10));
+                System.Media.SystemSounds.Asterisk.Play();
+                WriteToLog($"Корабль столкнулся с астероидом {i}.");
+                if (_ship.Energy <= 0) _ship.Die();
             }
-            _bullet.Update();
+            for (var i = 0; i < _healthpacks.Length; i++)
+            {
+                if (_healthpacks[i] == null) continue;
+                _healthpacks[i].Update();
+                if (!_ship.Collision(_healthpacks[i])) continue;
+                _ship.EnergyLow(-rnd.Next(1, 10));
+                _healthpacks[i].Dispose();
+                _healthpacks[i] = null;
+                WriteToLog($"Аптечка {i} собрана.");
+                System.Media.SystemSounds.Asterisk.Play();
+            }
         }
         /// <summary>
         /// Событие срабатывания таймера.
@@ -139,6 +230,50 @@ namespace Asteroids
             Draw();
             Update();
         }
-
+        /// <summary>
+        /// События управления кораблём.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e">Данные события нажатия клавиши.</param>
+        private static void Form_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.ControlKey)
+                if (_bullet == null)
+                {
+                    _bullet = new Bullet(new Point(_ship.Rect.X + 10, _ship.Rect.Y + 4), new Point(BULLETSPEED, 0), new Size(4, 1));
+                    WriteToLog($"Произошел выстрел.");
+                }
+            if (e.KeyCode == Keys.Up) _ship.Up();
+            if (e.KeyCode == Keys.Down) _ship.Down();
+        }
+        /// <summary>
+        /// Событие окончания игры.
+        /// </summary>
+        public static void Finish()
+        {
+            _timer.Stop();
+            Buffer.Graphics.DrawString("The End", new Font(FontFamily.GenericSansSerif, 60, FontStyle.Underline), Brushes.White, 200, 100);
+            Buffer.Render();
+            WriteToLog($"Игра закончена.");
+        }
+        /// <summary>
+        /// Запись лога в консоль.
+        /// </summary>
+        /// <param name="message"></param>
+        private static void LogToConsole (string message)
+        {
+            Console.WriteLine(message);
+        }
+        /// <summary>
+        /// Запись лога в файл.
+        /// </summary>
+        /// <param name="message"></param>
+        private static void LogToFile(string message)
+        {
+            using (var r = new StreamWriter(LOGFILENAME,true))
+            {
+                r.WriteLine(message);
+            }
+        }
     }
 }

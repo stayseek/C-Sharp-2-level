@@ -3,10 +3,10 @@ using System.Drawing;
 
 namespace Asteroids
 {
-    class Asteroid : BaseObject
+    class Asteroid : BaseObject, ICloneable, IComparable<Asteroid>
     {
         /// <summary>
-        /// Энергия или сила удара, будет известно в дальнейшем.
+        /// Наносимый урон.
         /// </summary>
         public int Power { get; set; }
 
@@ -18,7 +18,7 @@ namespace Asteroids
         /// <param name="size">Размер объекта.</param>
         public Asteroid(Point pos, Point dir, Size size) : base(pos, dir, size)
         {
-            Power = 1;
+           Power = 3;
         }
         /// <summary>
         /// Отрисовка объекта
@@ -36,13 +36,27 @@ namespace Asteroids
             if (Pos.X < 0) Pos.X = Game.Width + Size.Width;
         }
         /// <summary>
-        /// Перенос объекта по координате x.
+        /// Создание копии существующего астероида. (создано по методичке, пока не используется)
         /// </summary>
-        /// <param name="posX">Новая координата x объекта.</param>
-        public override void RegenerateAtX(int posX)
+        /// <returns>Копия астероида.</returns>
+        public object Clone()
         {
-            this.Pos.X = posX;
+            Asteroid asteroid = new Asteroid(new Point(Pos.X, Pos.Y), new Point(Dir.X, Dir.Y), new Size(Size.Width, Size.Height));
+            asteroid.Power = Power;
+            return asteroid;
+        }
+        /// <summary>
+        /// Сравнение 2 астероидов по энергии. (создано по методичке, пока не используется)
+        /// </summary>
+        /// <param name="other">Астероид для сравнения.</param>
+        /// <returns></returns>
+        int IComparable<Asteroid>.CompareTo(Asteroid other)
+        {
+            if (Power > other.Power)
+                return 1;
+            if (Power < other.Power)
+                return -1;
+            return 0;
         }
     }
-
 }

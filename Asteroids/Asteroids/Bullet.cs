@@ -6,6 +6,10 @@ namespace Asteroids
     class Bullet : BaseObject
     {
         /// <summary>
+        /// Флаг вылета пули за кран отображаемой области.
+        /// </summary>
+        public bool OffScreen { private set; get; }
+        /// <summary>
         /// Конструктор.
         /// </summary>
         /// <param name="pos">Положение на экране.</param>
@@ -13,6 +17,7 @@ namespace Asteroids
         /// <param name="size">Размер объекта.</param>
         public Bullet(Point pos, Point dir, Size size) : base(pos, dir, size)
         {
+            OffScreen = false;
         }
         /// <summary>
         /// Отрисовка объекта.
@@ -26,15 +31,11 @@ namespace Asteroids
         /// </summary>
         public override void Update()
         {
-            Pos.X = Pos.X + 3;
-        }
-        /// <summary>
-        /// Перенос объекта по координате x.
-        /// </summary>
-        /// <param name="posX">Новая координата x объекта.</param>
-        public override void RegenerateAtX(int posX)
-        {
-            this.Pos.X = posX;
+            Pos.X = Pos.X + Dir.X;
+            if (Pos.X > Game.Width)
+            {
+                OffScreen = true;
+            }
         }
     }
 }
