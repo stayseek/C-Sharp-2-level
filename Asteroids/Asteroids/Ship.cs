@@ -22,6 +22,10 @@ namespace Asteroids
         /// </summary>
         public static event Message MessageDie;
         /// <summary>
+        /// Событие создания корабля.
+        /// </summary>
+        public static event Action<string> CreateShip;
+        /// <summary>
         /// Изменение энергии корабля.
         /// </summary>
         /// <param name="n">Количество вычитаемой энергии.</param>
@@ -38,6 +42,7 @@ namespace Asteroids
         /// <param name="size">Размер объекта.</param>
         public Ship(Point pos, Point dir, Size size) : base(pos, dir, size)
         {
+            Ship.CreateShip?.Invoke($"Корабль создан");
         }
         /// <summary>
         /// Отрисовка объекта.
@@ -64,14 +69,15 @@ namespace Asteroids
         /// </summary>
         public void Down()
         {
-            if (Pos.Y < Game.Height) Pos.Y = Pos.Y + Dir.Y;
+            if (Pos.Y < Game.Height-10) Pos.Y = Pos.Y + Dir.Y;
         }
         /// <summary>
         /// Вызов события уничтожения корабля.
         /// </summary>
         public void Die()
         {
-            MessageDie.Invoke();
+            MessageDie?.Invoke();
         }
+
     }
 }
