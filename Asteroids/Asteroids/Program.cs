@@ -9,10 +9,11 @@ namespace Asteroids
         {
             Form form = new Form
             {
-                Width = Screen.PrimaryScreen.Bounds.Width,
-                Height = Screen.PrimaryScreen.Bounds.Height
+                Width = Screen.PrimaryScreen.WorkingArea.Width,
+                Height = Screen.PrimaryScreen.WorkingArea.Height
             };
             Game.Init(form);
+            form.SetDesktopLocation(0, 0);
             form.Show();
             Application.Run(form);
         }

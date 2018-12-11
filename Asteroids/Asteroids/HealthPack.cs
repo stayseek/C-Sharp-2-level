@@ -6,7 +6,7 @@ namespace Asteroids
     class HealthPack: Asteroid, IDisposable
     {
         /// <summary>
-        /// Изобрадение аптечки.
+        /// Изображение аптечки.
         /// </summary>
         private Image healthpackImage;
         /// <summary>
@@ -22,7 +22,7 @@ namespace Asteroids
 
         public void Dispose()
         {
-            healthpackImage = null;
+            healthpackImage.Dispose();
             GC.SuppressFinalize(this);
         }
 
